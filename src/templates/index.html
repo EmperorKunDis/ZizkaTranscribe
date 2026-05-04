@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Conversion by Whisper</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
     <style>
         body {
             background: linear-gradient(135deg, #3B4EF0 0%, #55178C 100%);
@@ -12,6 +13,45 @@
             display: flex;
             align-items: center;
             justify-content: center;
+        }
+        
+        /* Výrazné styly pro záložky */
+        .nav-tabs {
+            border-bottom: 2px solid #f8d848;
+            margin-bottom: 25px;
+            background-color: rgba(0, 0, 0, 0.5);
+            border-radius: 10px 10px 0 0;
+            padding: 10px 10px 0 10px;
+        }
+        
+        .nav-tabs .nav-link {
+            color: white;
+            background-color: rgba(40, 40, 80, 0.7);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            border-bottom: none;
+            border-radius: 8px 8px 0 0;
+            font-weight: bold;
+            font-size: 18px;
+            padding: 12px 25px;
+            margin-right: 5px;
+            box-shadow: 0 -2px 5px rgba(0, 0, 0, 0.2);
+            transition: all 0.3s;
+        }
+        
+        .nav-tabs .nav-link:hover {
+            color: #f8d848;
+            background-color: rgba(60, 60, 100, 0.8);
+            border-color: #f8d848;
+            transform: translateY(-3px);
+        }
+        
+        .nav-tabs .nav-link.active {
+            color: #000;
+            background-color: #f8d848;
+            border-color: #f8d848;
+            font-weight: bold;
+            transform: translateY(-3px);
+            box-shadow: 0 -4px 10px rgba(248, 216, 72, 0.3);
         }
 
         .background-seq {
@@ -139,71 +179,136 @@
             <img src="../static/img/VectorLogo.png" alt="Praut Logo" class="img-fluid mb-4" style="max-width: 300px;">
         </a>        
         <h1 class="praut-heading">Přepis a překlad</h1>
-        <form id="conversion-form" enctype="multipart/form-data" method="post">
-            <div class="mb-4">
-                <label for="recorder" class="form-label praut-label">Vložit audio:</label>
-                <input type="file" accept="audio/*" capture id="recorder" name="file" class="form-control praut-control praut-file" required>
-            </div>
-    
-            <div class="mb-4">
-                <label for="model_type" class="form-label praut-label">Vyberte jaký model použít pro přepis a překlad:</label>
-                <select id="model_type" name="model_type" class="form-select praut-control praut-select">
-                    <option value="turbo">turbo</option>
-                    <option value="tiny">tiny</option>
-                    <option value="base">base</option>
-                    <option value="small">small</option>
-                    <option value="medium">medium</option>
-                    <option value="large">large</option>
-                </select>
-            </div>
-    
-            <div class="mb-4">
-                <label for="file_type" class="form-label praut-label">Titulky ve formátu:</label>
-                <select id="file_type" name="file_type" class="form-select praut-control praut-select">
-                    <option value="srt">srt</option>
-                    <option value="vtt">vtt</option>
-                </select>
-            </div>
-    
-            <div class="mb-4">
-                <label for="filename" class="form-label praut-label">Jméno titulků:</label>
-                <input type="text" id="filename" name="filename" class="form-control praut-control" placeholder="subtitle">
-            </div>
-    
-            <div class="mb-4">
-                <label for="max_char" class="form-label praut-label">Maximální počet znaků pro titulky: <small class="text-light-emphasis">(Základně je 80)</small></label>
-                <input type="number" name="max_char" class="form-control praut-control" placeholder="80">
-            </div>
-    
-            <div class="mb-4">
-                <label for="translate_to" class="form-label praut-label">Přeložit do jazyka:</label>
-                <select name="translate_to" id="translate_to" class="form-select praut-control praut-select">
-                    <option value="english">Angličtina</option>
-                    <option value="german">Němčina</option>
-                    <option value="spanish">Španělština</option>
-                    <option value="arabic">Arabština</option>
-                    <option value="hindi">Hindština</option>
-                    <option value="bengali">Bengalština</option>
-                    <option value="portuguese">Portugalština</option>
-                    <option value="russian">Putin je Zmrd</option>
-                    <option value="urdu">Urdština</option>
-                    <option value="french">Francouština</option>
-                    <option value=zh-CN>Chinese</option>
-                </select>
-            </div>
-    
-            <div class="d-flex align-items-center mb-3">
-                <audio id="player" controls class="me-3"></audio>
-                <button type="submit" id="submit" class="btn btn-primary">
-                    <span class="spinner-border spinner-border-sm d-none" id="spinner" role="status" aria-hidden="true"></span>
-                    Přechroustat zvuk a přeložit titulky
-                </button>
-            </div>
         
-            {% if text %}
-                <div class="text">{{ text }}</div>
-            {% endif %}
-        </form>
+        <ul class="nav nav-tabs mb-4">
+            <li class="nav-item">
+                <a class="nav-link active" href="#upload" data-bs-toggle="tab">Nahrát audio</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="#history" data-bs-toggle="tab">Historie</a>
+            </li>
+        </ul>
+
+        <div class="tab-content">
+            <div class="tab-pane active" id="upload">
+                <form id="conversion-form" enctype="multipart/form-data" method="post">
+                    <div class="mb-4">
+                        <label for="recorder" class="form-label praut-label">Vložit audio:</label>
+                        <input type="file" accept="audio/*" capture id="recorder" name="file" class="form-control praut-control praut-file" required>
+                    </div>
+            
+                    <div class="mb-4">
+                        <label for="model_type" class="form-label praut-label">Vyberte jaký model použít pro přepis a překlad:</label>
+                        <select id="model_type" name="model_type" class="form-select praut-control praut-select">
+                            <option value="turbo">turbo</option>
+                            <option value="tiny">tiny</option>
+                            <option value="base">base</option>
+                            <option value="small">small</option>
+                            <option value="medium">medium</option>
+                            <option value="large">large</option>
+                        </select>
+                    </div>
+            
+                    <div class="mb-4">
+                        <label for="file_type" class="form-label praut-label">Titulky ve formátu:</label>
+                        <select id="file_type" name="file_type" class="form-select praut-control praut-select">
+                            <option value="srt">srt</option>
+                            <option value="vtt">vtt</option>
+                        </select>
+                    </div>
+            
+                    <div class="mb-4">
+                        <label for="filename" class="form-label praut-label">Jméno titulků:</label>
+                        <input type="text" id="filename" name="filename" class="form-control praut-control" placeholder="subtitle">
+                    </div>
+            
+                    <div class="mb-4">
+                        <label for="max_char" class="form-label praut-label">Maximální počet znaků pro titulky: <small class="text-light-emphasis">(Základně je 80)</small></label>
+                        <input type="number" name="max_char" class="form-control praut-control" placeholder="80">
+                    </div>
+            
+                    <div class="mb-4">
+                        <label for="translate_to" class="form-label praut-label">Přeložit do jazyka:</label>
+                        <select name="translate_to" id="translate_to" class="form-select praut-control praut-select">
+                            <option value="english">Angličtina</option>
+                            <option value="german">Němčina</option>
+                            <option value="spanish">Španělština</option>
+                            <option value="arabic">Arabština</option>
+                            <option value="hindi">Hindština</option>
+                            <option value="bengali">Bengalština</option>
+                            <option value="portuguese">Portugalština</option>
+                            <option value="russian">Putin je Zmrd</option>
+                            <option value="urdu">Urdština</option>
+                            <option value="french">Francouština</option>
+                            <option value=zh-CN>Chinese</option>
+                        </select>
+                    </div>
+            
+                    <div class="d-flex align-items-center mb-3">
+                        <audio id="player" controls class="me-3"></audio>
+                        <button type="submit" id="submit" class="btn btn-primary">
+                            <span class="spinner-border spinner-border-sm d-none" id="spinner" role="status" aria-hidden="true"></span>
+                            Přechroustat zvuk a přeložit titulky
+                        </button>
+                    </div>
+                
+                    {% if text %}
+                        <div class="text">{{ text }}</div>
+                    {% endif %}
+                </form>
+            </div>
+
+            <div class="tab-pane" id="history">
+                <div class="table-responsive">
+                    <table class="table table-dark">
+                        <thead>
+                            <tr>
+                                <th>Název</th>
+                                <th>Status</th>
+                                <th>Model</th>
+                                <th>Jazyk překladu</th>
+                                <th>Formát</th>
+                                <th>Vytvořeno</th>
+                                <th>Akce</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% if audio_files %}
+                                {% for file in audio_files %}
+                                <tr>
+                                    <td>{{ file.original_name }}</td>
+                                    <td>
+                                        {% if file.status == 'completed' %}
+                                        <span class="badge bg-success">Hotovo</span>
+                                        {% elif file.status == 'processing' %}
+                                        <span class="badge bg-warning">Zpracovává se</span>
+                                        {% else %}
+                                        <span class="badge bg-danger">Chyba</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ file.model_type }}</td>
+                                    <td>{{ file.translation_language }}</td>
+                                    <td>{{ file.subtitle_format }}</td>
+                                    <td>{{ file.created_at.strftime('%d.%m.%Y %H:%M') }}</td>
+                                    <td>
+                                        {% if file.status == 'completed' %}
+                                        <a href="/download/{{ file.id }}" class="btn btn-sm btn-primary">Stáhnout</a>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            {% else %}
+                                <tr>
+                                    <td colspan="7" class="text-center">
+                                        <p class="my-3">Zatím nejsou k dispozici žádné záznamy. Zpracujte první audio soubor.</p>
+                                    </td>
+                                </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script src="/static/main.js"></script>

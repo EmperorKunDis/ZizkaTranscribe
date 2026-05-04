@@ -1,8 +1,10 @@
-from datetime import timedelta
+from datetime import timedelta, datetime
 from typing import Optional
+import os
+import uuid
 
-from fastapi import FastAPI, Request, File, Form
-from fastapi.responses import HTMLResponse, StreamingResponse
+from fastapi import FastAPI, Request, File, Form, HTTPException
+from fastapi.responses import HTMLResponse, StreamingResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 import ffmpeg
@@ -10,6 +12,8 @@ import numpy as np
 import srt as srt
 import stable_whisper
 from deep_translator import GoogleTranslator
+
+from models import SessionLocal, AudioFile
 
 DEFAULT_MAX_CHARACTERS = 80
 
@@ -66,7 +70,7 @@ def translate_text(text: str, translate_to: str):
     return GoogleTranslator(source='auto', target=translate_to).translate(text=text)
 
 
-def make_srt_subtitles(segments: list,translate_to: str, max_chars: int):
+def make_srt_subtitles(segments: list, translate_to: str, max_chars: int):
     subtitles = []
     for i, seg in enumerate(segments, start=1):
         start_time = seg.start
@@ -100,7 +104,12 @@ template = Jinja2Templates(directory='templates')
 
 @appold.get('/', response_class=HTMLResponse)
 def index(request: Request):
-    return template.TemplateResponse('index.html', {"request": request, "text": None})
+    db = SessionLocal()
+    try:
+        audio_files = db.query(AudioFile).order_by(AudioFile.created_at.desc()).all()
+        return template.TemplateResponse('index.html', {"request": request, "text": None, "audio_files": audio_files})
+    finally:
+        db.close()
 
 
 @appold.post('/download/')
@@ -114,36 +123,81 @@ async def download_subtitle(
         max_characters: int = Form(DEFAULT_MAX_CHARACTERS),
         translate_to: str = Form('spanish'),
 ):
-
-    with open('audio.mp3', 'wb') as f:
-        f.write(file)
+    db = SessionLocal()
     
-    model = stable_whisper.load_model(model_type)
-    result = model.transcribe("audio.mp3", regroup=False)
+    # Create unique filename
+    unique_id = str(uuid.uuid4())
+    audio_filename = f"audio_{unique_id}.mp3"
+    subtitle_filename = f"subtitle_{unique_id}.{file_type}"
+    
+    # Create uploads and subtitles directories if they don't exist
+    os.makedirs('uploads', exist_ok=True)
+    os.makedirs('subtitles', exist_ok=True)
+    
+    # Create database record
+    audio_file = AudioFile(
+        filename=subtitle_filename,
+        original_name=filename,
+        status="processing",
+        model_type=model_type,
+        translation_language=translate_to,
+        subtitle_format=file_type
+    )
+    db.add(audio_file)
+    db.commit()
 
-    subtitle_file = "subtitle.srt"
+    try:
+        # Save audio file
+        with open(f'uploads/{audio_filename}', 'wb') as f:
+            f.write(file)
+        
+        # Process audio
+        model = stable_whisper.load_model(model_type)
+        result = model.transcribe(f'uploads/{audio_filename}', regroup=False)
 
-    if file_type == "srt":
-        subtitle_file = f"{filename}.srt"
-        with open(subtitle_file, "w") as f:
-            if timestamps:
+        # Generate subtitles
+        subtitle_path = f'subtitles/{subtitle_filename}'
+        with open(subtitle_path, 'w') as f:
+            if timestamps == "True":
                 f.write(make_srt_subtitles(result.segments, translate_to, max_characters))
             else:
                 f.write(result.text)
-    elif file_type == "vtt":
-        subtitle_file = f"{filename}.vtt"
-        with open(subtitle_file, "w") as f:
-            if timestamps:
-                f.write(result.to_vtt())
-            else:
-                f.write(result.text)
+
+        # Update database record
+        audio_file.status = "completed"
+        audio_file.completed_at = datetime.utcnow()
+        db.commit()
+
+        # Return file for download
+        return FileResponse(
+            subtitle_path,
+            media_type="application/octet-stream",
+            filename=f"{filename}.{file_type}"
+        )
+
+    except Exception as e:
+        audio_file.status = "error"
+        db.commit()
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        db.close()
 
 
-    media_type = "application/octet-stream"
-    response = StreamingResponse(
-        open(subtitle_file, 'rb'),
-        media_type=media_type,
-        headers={'Content-Disposition': f'attachment;filename={subtitle_file}'}
-    )
-
-    return response
+@appold.get('/download/{file_id}')
+def download_processed(file_id: int):
+    db = SessionLocal()
+    try:
+        audio_file = db.query(AudioFile).filter_by(id=file_id).first()
+        if not audio_file:
+            raise HTTPException(status_code=404, detail="File not found")
+        
+        if audio_file.status != "completed":
+            raise HTTPException(status_code=400, detail="File not ready")
+            
+        return FileResponse(
+            f'subtitles/{audio_file.filename}',
+            media_type="application/octet-stream",
+            filename=f"{audio_file.original_name}.{audio_file.subtitle_format}"
+        )
+    finally:
+        db.close()

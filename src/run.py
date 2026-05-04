@@ -15,9 +15,13 @@ def run_localhost():
 
 
 if __name__ == '__main__':
+    # Create required directories
+    Path("../data").mkdir(parents=True, exist_ok=True)
+    Path("uploads").mkdir(exist_ok=True)
+    Path("subtitles").mkdir(exist_ok=True)
+    
     open_browser_proc = Process(target=open_browser)
     run_localhost_proc = Process(target=run_localhost)
-    Path("../data").mkdir(parents=True, exist_ok=True)
 
     run_localhost_proc.start()
     sleep(2)

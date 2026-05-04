@@ -1,12 +1,38 @@
 /* Moved the inline JavaScript to this file so it can keep the html cleaner */
 /* script */
-const recorder = document.getElementById('recorder');
-const player = document.getElementById('player');
+document.addEventListener('DOMContentLoaded', function() {
+  // Audio preview
+  const recorder = document.getElementById('recorder');
+  const player = document.getElementById('player');
 
-recorder.addEventListener('change', function (e) {
-  const file = e.target.files[0];
-  const url = URL.createObjectURL(file);
-  player.src = url;
+  if (recorder && player) {
+    recorder.addEventListener('change', function (e) {
+      const file = e.target.files[0];
+      const url = URL.createObjectURL(file);
+      player.src = url;
+    });
+  }
+
+  // Tab navigation
+  const tabLinks = document.querySelectorAll('.nav-link');
+  const tabPanes = document.querySelectorAll('.tab-pane');
+  
+  tabLinks.forEach(link => {
+    link.addEventListener('click', function(e) {
+      e.preventDefault();
+      
+      // Remove active class from all tabs
+      tabLinks.forEach(tab => tab.classList.remove('active'));
+      tabPanes.forEach(pane => pane.classList.remove('active'));
+      
+      // Add active class to the clicked tab
+      this.classList.add('active');
+      
+      // Show the corresponding tab content
+      const tabId = this.getAttribute('href').substring(1);
+      document.getElementById(tabId).classList.add('active');
+    });
+  });
 });
 /* /script */
 

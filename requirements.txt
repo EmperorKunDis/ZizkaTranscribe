@@ -3,6 +3,7 @@ uvicorn
 jinja2
 python-multipart
 stable-ts
+sqlalchemy
 
 numpy
 torch
